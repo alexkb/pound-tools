@@ -9,16 +9,18 @@
 CHECK_POUND_ACTIVE_SLEEP_TIME=2 # number of seconds to sleep between each check. Don't set this too quickly, as it might cause load itself potentially.
 POUND_PID_PATH=/var/run/pound.pid
 
-if [ ! -r $POUND_PID_PATH ]; then
-  echo "Error: No permission to pound.pid file"
-  exit 3; # State unknown
-fi;
-
-POUND_PID=$((`cat $POUND_PID_PATH`+1))
-
 echo "Press Ctrl-c to cancel."
 
 while [ 1 -eq 1 ] ; do
+  # Read in PID file each time, incase pound gets restarted during testing.
+  if [ ! -e $POUND_PID_PATH ]; then
+    echo "Pound PID file not found. Will try again in 5 seconds."
+    sleep 5
+    continue
+  fi;
+
+  POUND_PID=$((`cat $POUND_PID_PATH`+1))
+  
   POUND_OUTPUT=`find /proc/${POUND_PID}/task/*/syscall -type f -exec cat {} \; -exec echo "|" \;`
 
   ACTIVE=0
@@ -59,7 +61,7 @@ while [ 1 -eq 1 ] ; do
     STATUS=2
   fi
 
-  echo -ne "$STATUSTXT - percentage active threads: $PERC%\r"
+  echo -ne "$STATUSTXT - percentage active threads: $PERC%        \r"
 
   sleep $CHECK_POUND_ACTIVE_SLEEP_TIME
 
